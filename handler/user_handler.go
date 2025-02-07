@@ -6,22 +6,22 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-// GetUsers handler untuk mengambil semua user
-func GetUsers(c *gin.Context) {
-	// Mendapatkan query parameter "name" jika ada
-	name := c.DefaultQuery("name", "") // Default kosong jika tidak ada query parameter "name"
+// GetUsers handler to retrieve all users
+func GetUsers(c *gin.Context, db *gorm.DB) {
+	// Get the query parameter "name" if available
+	name := c.DefaultQuery("name", "") // Default empty if no query parameter "name"
 
-	// Jika ada query parameter name, kita filter berdasarkan nama
 	var users []model.User
 	var err error
 
+	// If there's a "name" query parameter, fetch users by name
 	if name != "" {
-		// Jika ada nama, ambil user berdasarkan nama
 		users, err = repository.GetUsersByName(name)
 	} else {
-		// Jika tidak ada nama, ambil semua user
+		// Otherwise, fetch all users
 		users, err = repository.GetAllUsers()
 	}
 
@@ -30,12 +30,31 @@ func GetUsers(c *gin.Context) {
 		return
 	}
 
-	// Jika data kosong, kembalikan pesan dengan status 404 atau 204
+	// If no users found, return 404 or 204
 	if len(users) == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"message": "No users found"})
 		return
 	}
 
-	// Jika ada data, kembalikan hasil dalam format JSON
+	// If users are found, return them in JSON format
 	c.JSON(http.StatusOK, users)
+}
+
+// CreateUser handler to create a user
+func CreateUser(c *gin.Context, db *gorm.DB) {
+	var user model.User
+
+	// Bind the incoming JSON to the user struct
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	// Save the user in the database
+	if err := db.Create(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, user)
 }

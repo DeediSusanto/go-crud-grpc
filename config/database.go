@@ -19,7 +19,7 @@ func ConnectToDatabase() (*gorm.DB, error) {
 	}
 
 	// Migrasi otomatis untuk model User
-	err = db.AutoMigrate(&model.User{})
+	err = db.AutoMigrate(&model.User{}, &model.Product{}) // Add Product model here
 	if err != nil {
 		return nil, fmt.Errorf("failed to migrate: %w", err)
 	}

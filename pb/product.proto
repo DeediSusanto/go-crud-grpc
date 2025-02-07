@@ -2,6 +2,9 @@ syntax = "proto3";
 
 package product;
 
+// Add this line specifying the Go package
+option go_package = "./pb;pb"; // This will specify the Go package path
+
 service ProductService {
     rpc CreateProduct (CreateProductRequest) returns (ProductResponse);
     rpc GetProduct (GetProductRequest) returns (ProductResponse);
