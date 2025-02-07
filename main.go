@@ -1,23 +1,19 @@
 package main
 
 import (
-	"log"
-
 	"go-crud-grpc/handler"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	// Membuat instance Gin router
+	// Membuat router Gin
 	r := gin.Default()
 
-	// Definisikan route untuk CRUD User
+	// Menambahkan routing untuk API
 	r.GET("/users", handler.GetUsers)
 	r.POST("/users", handler.CreateUser)
 
-	// Menjalankan server di port 8080
-	if err := r.Run(":8080"); err != nil {
-		log.Fatal(err)
-	}
+	// Menjalankan server pada port 8080
+	r.Run(":8080")
 }

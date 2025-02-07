@@ -1,8 +1,10 @@
 package model
 
-// User adalah model data untuk pengguna
+import "gorm.io/gorm"
+
+// Model User yang akan dipetakan ke dalam tabel users di database
 type User struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	gorm.Model        // GORM akan menambahkan ID, CreatedAt, UpdatedAt, dan DeletedAt
+	Name       string `json:"name"`
+	Email      string `json:"email"`
 }
