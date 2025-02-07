@@ -28,6 +28,8 @@ Sebelum masuk ke implementasi, mari kita tentukan struktur folder terlebih dahul
 ├── go.mod
 ├── go.sum
 └── README.md
+
+
 1. Menyiapkan File product.proto
 Langkah pertama adalah membuat gRPC service definition menggunakan file Protocol Buffers (product.proto). File ini akan mendefinisikan struktur data dan service gRPC kita.
 
