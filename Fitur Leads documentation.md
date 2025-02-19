@@ -26,3 +26,14 @@ pb\                         # Protobuf files
 │── go.mod                        # Go module dependencies
 │── go.sum                        # Checksum dependencies
 │── README.md                     # Dokumentasi proyek
+
+
+ Penjelasan Struktur yang Diperbarui
+✅ pb/lead.proto → File definisi Protobuf utama.
+✅ pb/lead.pb.go & pb/lead_grpc.pb.go → File yang dihasilkan oleh protoc.
+✅ internal/repository/lead_repository.go → Fungsi untuk query database (CRUD).
+✅ internal/service/lead_service.go → Business logic Lead sebelum diteruskan ke repository.
+✅ handler/lead_handler.go → API handler untuk REST menggunakan Gin.
+✅ model/lead.go → Model Lead untuk ORM menggunakan GORM.
+✅ config/database.go → File konfigurasi database MySQL.
+✅ server/main.go → Entry point untuk menjalankan gRPC & REST API server.
