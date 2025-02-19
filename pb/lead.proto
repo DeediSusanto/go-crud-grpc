@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "go-crud-grpc/pb;pb";
+
+message Lead {
+    int32 id = 1;
+    string name = 2;
+    string email = 3;
+    string phone = 4;
+    string company = 5;
+    string source = 6;
+    string status = 7;
+    string notes = 8;
+}
+
+service LeadService {
+    rpc CreateLead (CreateLeadRequest) returns (LeadResponse);
+    rpc GetLead (GetLeadRequest) returns (LeadResponse);
+    rpc GetAllLeads (GetAllLeadsRequest) returns (LeadListResponse);
+    rpc UpdateLead (UpdateLeadRequest) returns (LeadResponse);
+    rpc DeleteLead (DeleteLeadRequest) returns (LeadResponse);
+}
+
+message CreateLeadRequest {
+    string name = 1;
+    string email = 2;
+    string phone = 3;
+    string company = 4;
+    string source = 5;
+    string status = 6;
+    string notes = 7;
+}
+
+message GetLeadRequest {
+    int32 id = 1;
+}
+
+message UpdateLeadRequest {
+    int32 id = 1;
+    string name = 2;
+    string email = 3;
+    string phone = 4;
+    string company = 5;
+    string source = 6;
+    string status = 7;
+    string notes = 8;
+}
+
+message DeleteLeadRequest {
+    int32 id = 1;
+}
+
+message LeadResponse {
+    bool success = 1;
+    string message = 2;
+    Lead lead = 3;
+}
+
+message GetAllLeadsRequest {}
+
+message LeadListResponse {
+    repeated Lead leads = 1;
+}
