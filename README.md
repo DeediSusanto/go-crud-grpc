@@ -326,3 +326,144 @@ Copy
 POST http://localhost:8080/products
 Untuk menguji gRPC, kamu bisa menggunakan Postman atau tools gRPC lainnya seperti Insomnia.
 
+📌 Breakdown & Rangkuman Fitur Transaksi dengan Golang, GORM, dan gRPC
+Di dalam proyek ini, kita membangun sistem CRUD transaksi dengan standar PCI-DSS di Golang, menggunakan GORM sebagai ORM, gRPC sebagai protokol komunikasi antar layanan, serta mengimplementasikan enkripsi data dan tokenisasi kartu kredit untuk keamanan.
+
+🛠️ 1. Fitur yang Diimplementasikan
+🔹 1.1. Fitur dalam Sistem Transaksi
+Membuat Transaksi Baru (POST /transactions)
+
+Validasi user_id dan product_id harus ada di database.
+Validasi amount harus lebih dari 0.
+Tokenisasi kartu kredit untuk menghindari penyimpanan nomor asli.
+Menyimpan transaksi ke database dengan status awal "Pending".
+Melihat Semua Transaksi (GET /transactions)
+
+Mengambil semua data transaksi dari database.
+Melihat Detail Transaksi (GET /transactions/:id)
+
+Mengambil data transaksi berdasarkan ID transaksi.
+🔹 1.2. Struktur Database (MySQL 8)
+Menggunakan MySQL sebagai database utama dengan tabel berikut:
+
+1️⃣ Tabel users (Menyimpan data pengguna)
+sql
+Copy
+Edit
+CREATE TABLE users (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL
+);
+2️⃣ Tabel products (Menyimpan data produk yang dibeli pengguna)
+sql
+Copy
+Edit
+CREATE TABLE products (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    price FLOAT NOT NULL
+);
+3️⃣ Tabel transactions (Menyimpan data transaksi)
+sql
+Copy
+Edit
+CREATE TABLE transactions (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    product_id INT UNSIGNED NOT NULL,
+    amount FLOAT NOT NULL,
+    card_token VARCHAR(255) NOT NULL,
+    status ENUM('Pending', 'Completed', 'Failed') NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+📝 2. Masalah yang Ditemui & Solusi
+🐞 2.1. Bug Parsing amount sebagai float64
+🛑 BUG:
+Awalnya menggunakan strconv.ParseFloat(c.PostForm("amount"), 64), tetapi data dikirim dalam format JSON.
+Masalah: PostForm() hanya bisa mengambil data dari application/x-www-form-urlencoded, bukan dari JSON.
+✅ SOLUSI:
+Menggunakan ShouldBindJSON() untuk parsing JSON secara langsung:
+
+go
+Copy
+Edit
+var request struct {
+    UserID     uint    `json:"user_id"`
+    ProductID  uint    `json:"product_id"`
+    Amount     float64 `json:"amount"`
+    CardNumber string  `json:"card_number"`
+}
+if err := c.ShouldBindJSON(&request); err != nil {
+    c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+    return
+}
+🐞 2.2. Bug product.ID bertipe int32, tetapi transaksi butuh uint
+🛑 BUG:
+Saat mengambil product.ID, tipe data yang dikembalikan dari GORM adalah int32.
+Masalah: Struktur transaksi membutuhkan uint, tetapi product.ID adalah int32.
+✅ SOLUSI:
+Gunakan konversi tipe data secara eksplisit:
+
+go
+Copy
+Edit
+ProductID: uint(product.ID), // Konversi dari int32 ke uint
+🐞 2.3. Bug TransactionService Memerlukan Semua Repository
+🛑 BUG:
+Constructor NewTransactionService() awalnya hanya menerima transactionRepo, tetapi di dalam CreateTransaction(), kita juga butuh userRepo dan productRepo.
+✅ SOLUSI:
+Perbaiki constructor agar menerima semua repository yang diperlukan:
+
+go
+Copy
+Edit
+func NewTransactionService(
+    repo *repository.TransactionRepository,
+    userRepo *repository.UserRepository,
+    productRepo *repository.ProductRepository,
+) *TransactionService {
+    return &TransactionService{
+        repo:        repo,
+        userRepo:    userRepo,
+        productRepo: productRepo,
+    }
+}
+🐞 2.4. Bug Validasi ID Transaksi (GetTransactionByID)
+🛑 BUG:
+Sebelumnya, strconv.Atoi(c.Param("id")) bisa mengembalikan error jika ID tidak valid, tetapi tidak divalidasi.
+Masalah: Jika ada kesalahan parsing, maka tetap diproses dengan nilai 0.
+✅ SOLUSI:
+Tambahkan pengecekan error:
+
+go
+Copy
+Edit
+id, err := strconv.Atoi(c.Param("id"))
+if err != nil {
+    c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid transaction ID"})
+    return
+}
+🔄 3. Cara Kerja Alur Transaksi
+✅ 1. User membuat transaksi dengan POST /transactions
+Aplikasi mengecek apakah user_id dan product_id ada di database.
+Mengecek apakah amount > 0.
+Tokenisasi kartu kredit untuk keamanan.
+Menyimpan transaksi di database dengan status "Pending".
+✅ 2. User melihat daftar transaksi dengan GET /transactions
+Mengambil semua transaksi dari database.
+✅ 3. User melihat detail transaksi dengan GET /transactions/:id
+Mengambil transaksi berdasarkan ID transaksi.
+Jika ID tidak valid atau transaksi tidak ditemukan, mengembalikan error.
+📌 4. Ringkasan Implementasi
+Fitur	Metode HTTP	Endpoint	Deskripsi
+Buat transaksi	POST	/transactions	Membuat transaksi baru dengan validasi dan tokenisasi kartu kredit.
+Lihat semua transaksi	GET	/transactions	Mengambil daftar semua transaksi.
+Lihat transaksi berdasarkan ID	GET	/transactions/:id	Mengambil transaksi berdasarkan ID.
+📌 5. Kesimpulan
+Penerapan Golang + GORM untuk transaksi dengan standar PCI-DSS.
+Menggunakan enkripsi dan tokenisasi kartu kredit untuk keamanan.
+Memastikan validasi transaksi dengan pengecekan user dan produk.
+Menggunakan best practices seperti JSON binding (ShouldBindJSON()).
+Mengatasi berbagai bug terkait tipe data (int32 vs uint), parsing amount, dan validasi ID transaksi.
