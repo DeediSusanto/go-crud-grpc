@@ -6,23 +6,27 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-// GetUsers handler to retrieve all users
-func GetUsers(c *gin.Context, db *gorm.DB) {
-	// Get the query parameter "name" if available
-	name := c.DefaultQuery("name", "") // Default empty if no query parameter "name"
+type UserHandler struct {
+	repo *repository.UserRepository
+}
+
+func NewUserHandler(repo *repository.UserRepository) *UserHandler {
+	return &UserHandler{repo: repo}
+}
+
+// ✅ Get Users
+func (h *UserHandler) GetUsers(c *gin.Context) {
+	name := c.DefaultQuery("name", "")
 
 	var users []model.User
 	var err error
 
-	// If there's a "name" query parameter, fetch users by name
 	if name != "" {
-		users, err = repository.GetUsersByName(name)
+		users, err = h.repo.GetByName(name) // 🔄 Sesuai dengan method di UserRepository
 	} else {
-		// Otherwise, fetch all users
-		users, err = repository.GetAllUsers()
+		users, err = h.repo.GetAll() // 🔄 Sesuai dengan method di UserRepository
 	}
 
 	if err != nil {
@@ -30,28 +34,24 @@ func GetUsers(c *gin.Context, db *gorm.DB) {
 		return
 	}
 
-	// If no users found, return 404 or 204
 	if len(users) == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"message": "No users found"})
 		return
 	}
 
-	// If users are found, return them in JSON format
 	c.JSON(http.StatusOK, users)
 }
 
-// CreateUser handler to create a user
-func CreateUser(c *gin.Context, db *gorm.DB) {
+// ✅ Create User
+func (h *UserHandler) CreateUser(c *gin.Context) {
 	var user model.User
 
-	// Bind the incoming JSON to the user struct
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
-	// Save the user in the database
-	if err := db.Create(&user).Error; err != nil {
+	if err := h.repo.DB.Create(&user).Error; err != nil { // 🔄 Sesuai dengan penggunaan GORM
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}

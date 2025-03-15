@@ -6,41 +6,48 @@ import (
 	"go-crud-grpc/repository"
 
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"gorm.io/gorm"
 )
 
 type ProductService struct {
-	productRepo repository.ProductRepository
+	productRepo *repository.ProductRepository
 	pb.UnimplementedProductServiceServer
 }
 
-func NewProductService() *ProductService {
+func NewProductService(db *gorm.DB) *ProductService {
 	return &ProductService{
-		productRepo: repository.NewProductRepository(),
+		productRepo: repository.NewProductRepository(db),
 	}
 }
 
+// ✅ Create Product
 func (s *ProductService) CreateProduct(ctx context.Context, req *pb.CreateProductRequest) (*pb.ProductResponse, error) {
+	// Cek apakah nama produk kosong
+	if req.GetName() == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "Product name cannot be empty")
+	}
+
 	product := model.Product{
 		Name:        req.GetName(),
 		Description: req.GetDescription(),
-		Price:       req.GetPrice(),
+		Price:       float64(req.GetPrice()), // ✅ Konversi float32 ke float64
 	}
-	createdProduct, err := s.productRepo.Create(&product)
-	if err != nil {
-		return &pb.ProductResponse{
-			Success: false,
-			Message: "Failed to create product",
-		}, err
+
+	if err := s.productRepo.Create(&product); err != nil {
+		return nil, err
 	}
 
 	return &pb.ProductResponse{
 		Success: true,
 		Message: "Product created successfully",
 		Product: &pb.Product{
-			Id:          int32(createdProduct.ID),
-			Name:        createdProduct.Name,
-			Description: createdProduct.Description,
-			Price:       float32(createdProduct.Price),
+			Id:          int32(product.ID), // ✅ Pastikan ID tetap int32
+			Name:        product.Name,
+			Description: product.Description,
+			Price:       float32(product.Price), // ✅ Konversi float64 ke float32
 		},
 	}, nil
+
 }

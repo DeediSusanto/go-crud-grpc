@@ -2,16 +2,24 @@ package handler
 
 import (
 	"go-crud-grpc/model"
+	"go-crud-grpc/repository"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-// GetProducts handler to retrieve all products
-func GetProducts(c *gin.Context, db *gorm.DB) {
-	var products []model.Product
-	err := db.Find(&products).Error
+type ProductHandler struct {
+	repo *repository.ProductRepository
+}
+
+func NewProductHandler(repo *repository.ProductRepository) *ProductHandler {
+	return &ProductHandler{repo: repo}
+}
+
+// ✅ Get all products
+func (h *ProductHandler) GetProducts(c *gin.Context) {
+	products, err := h.repo.GetAll()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve products"})
 		return
@@ -20,14 +28,15 @@ func GetProducts(c *gin.Context, db *gorm.DB) {
 	c.JSON(http.StatusOK, products)
 }
 
-// GetProduct handler to retrieve a product by ID
-func GetProduct(c *gin.Context, db *gorm.DB) {
-	// Get the product ID from the URL
-	id := c.Param("id")
+// ✅ Get a single product by ID
+func (h *ProductHandler) GetProduct(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
+		return
+	}
 
-	// Fetch the product by ID
-	var product model.Product
-	err := db.First(&product, id).Error
+	product, err := h.repo.GetByID(uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 		return
@@ -36,17 +45,15 @@ func GetProduct(c *gin.Context, db *gorm.DB) {
 	c.JSON(http.StatusOK, product)
 }
 
-// CreateProduct handler to create a product
-func CreateProduct(c *gin.Context, db *gorm.DB) {
-	// Bind the incoming JSON to the product struct
+// ✅ Create a new product
+func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	var product model.Product
 	if err := c.ShouldBindJSON(&product); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
-	// Save the product in the database
-	if err := db.Create(&product).Error; err != nil {
+	if err := h.repo.Create(&product); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create product"})
 		return
 	}
@@ -54,26 +61,23 @@ func CreateProduct(c *gin.Context, db *gorm.DB) {
 	c.JSON(http.StatusCreated, product)
 }
 
-// UpdateProduct handler to update a product by ID
-func UpdateProduct(c *gin.Context, db *gorm.DB) {
-	// Get the product ID from the URL
-	id := c.Param("id")
-
-	// Fetch the product by ID
-	var product model.Product
-	if err := db.First(&product, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+// ✅ Update a product by ID
+func (h *ProductHandler) UpdateProduct(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
 		return
 	}
 
-	// Bind the incoming JSON to the product struct
+	var product model.Product
 	if err := c.ShouldBindJSON(&product); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
-	// Save the updated product in the database
-	if err := db.Save(&product).Error; err != nil {
+	product.ID = int32(id) // ✅ Perbaikan di sini
+
+	if err := h.repo.Update(&product); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update product"})
 		return
 	}
@@ -81,20 +85,15 @@ func UpdateProduct(c *gin.Context, db *gorm.DB) {
 	c.JSON(http.StatusOK, product)
 }
 
-// DeleteProduct handler to delete a product by ID
-func DeleteProduct(c *gin.Context, db *gorm.DB) {
-	// Get the product ID from the URL
-	id := c.Param("id")
-
-	// Fetch the product by ID
-	var product model.Product
-	if err := db.First(&product, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+// ✅ Delete a product by ID
+func (h *ProductHandler) DeleteProduct(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
 		return
 	}
 
-	// Delete the product from the database
-	if err := db.Delete(&product).Error; err != nil {
+	if err := h.repo.Delete(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete product"})
 		return
 	}

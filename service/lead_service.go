@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"go-crud-grpc/internal/repository"
 	"go-crud-grpc/pb"
+	"go-crud-grpc/repository"
 )
 
 type LeadService struct {

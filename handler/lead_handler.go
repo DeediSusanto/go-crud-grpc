@@ -1,85 +1,96 @@
 package handler
 
 import (
-	"go-crud-grpc/model"
+	"go-crud-grpc/pb"
+	"go-crud-grpc/repository"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-// Get all leads
-func GetLeads(c *gin.Context, db *gorm.DB) {
-	var leads []model.Lead
-	if err := db.Find(&leads).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch leads"})
-		return
-	}
+type LeadHandler struct {
+	repo *repository.LeadRepository
+}
+
+func NewLeadHandler(repo *repository.LeadRepository) *LeadHandler {
+	return &LeadHandler{repo: repo}
+}
+
+// ✅ Get all leads
+func (h *LeadHandler) GetLeads(c *gin.Context) {
+	leads := h.repo.GetAllLeads()
 	c.JSON(http.StatusOK, leads)
 }
 
-// Get a single lead by ID
-func GetLead(c *gin.Context, db *gorm.DB) {
-	id := c.Param("id")
-	var lead model.Lead
+// ✅ Get a single lead by ID
+func (h *LeadHandler) GetLead(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid lead ID"})
+		return
+	}
 
-	if err := db.First(&lead, id).Error; err != nil {
+	lead, err := h.repo.GetLead(int32(id))
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Lead not found"})
-		return
-	}
-	c.JSON(http.StatusOK, lead)
-}
-
-// Create a new lead
-func CreateLead(c *gin.Context, db *gorm.DB) {
-	var lead model.Lead
-	if err := c.ShouldBindJSON(&lead); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
-		return
-	}
-
-	if err := db.Create(&lead).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create lead"})
-		return
-	}
-	c.JSON(http.StatusCreated, lead)
-}
-
-// Update an existing lead
-func UpdateLead(c *gin.Context, db *gorm.DB) {
-	id := c.Param("id")
-	var lead model.Lead
-
-	if err := db.First(&lead, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Lead not found"})
-		return
-	}
-
-	if err := c.ShouldBindJSON(&lead); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
-		return
-	}
-
-	if err := db.Save(&lead).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update lead"})
 		return
 	}
 
 	c.JSON(http.StatusOK, lead)
 }
 
-// Delete a lead
-func DeleteLead(c *gin.Context, db *gorm.DB) {
-	id := c.Param("id")
-	var lead model.Lead
-
-	if err := db.First(&lead, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Lead not found"})
+// ✅ Create a new lead
+func (h *LeadHandler) CreateLead(c *gin.Context) {
+	var lead pb.Lead
+	if err := c.ShouldBindJSON(&lead); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
 
-	if err := db.Delete(&lead).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete lead"})
+	newLead, err := h.repo.CreateLead(&lead)
+	if err != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, newLead)
+}
+
+// ✅ Update an existing lead
+func (h *LeadHandler) UpdateLead(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid lead ID"})
+		return
+	}
+
+	var lead pb.Lead
+	if err := c.ShouldBindJSON(&lead); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	lead.Id = int32(id) // Set ID yang benar
+	updatedLead, err := h.repo.UpdateLead(&lead)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, updatedLead)
+}
+
+// ✅ Delete a lead
+func (h *LeadHandler) DeleteLead(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid lead ID"})
+		return
+	}
+
+	if err := h.repo.DeleteLead(int32(id)); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
